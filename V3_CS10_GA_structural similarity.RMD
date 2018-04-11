@@ -1,0 +1,136 @@
+---
+title: "Structural similarity between graphs"
+author: "nikitha"
+date: "23 December 2017"
+output: html_document
+---
+
+
+
+## R Markdown
+Finding the similarity between the 2 models having similar component name but change in relationship type.
+get to know the idea by comparing 2 similarity matrix, which node has the difference in edge structure or which components have different edge structure.
+Association between 2 matrices can be calculated using corelation test.(cor.test) 
+
+
+#read dataset of 2 model
+```{r}
+#read data of version 3 airport model 
+library(readr)
+elements1 <- read_csv("H:/theis_work/SWC_chair_ml_related/Archi_data/03airport_version3/elements.csv")
+dim(elements1)
+
+library(readr)
+relations1 <- read_csv("H:/theis_work/SWC_chair_ml_related/Archi_data/03airport_version3/relations.csv")
+dim(relations1)
+
+#read data of changed airport model of version3(removed/added edge data)
+library(readr)
+elements2 <- read_csv("H:/theis_work/SWC_chair_ml_related/02_work/02case_study_graph_analytics/version3_AIRPORT/V3_cs10_GA_structural_similarity/archiData/elements.csv")
+dim(elements2)
+
+library(readr)
+relations2 <- read_csv("H:/theis_work/SWC_chair_ml_related/02_work/02case_study_graph_analytics/version3_AIRPORT/V3_cs10_GA_structural_similarity/archiData/relations.csv")
+dim(relations2)
+
+```
+
+###case study to find structural similarity between the models having similar component name/ similar no of components
+#produce graph 1
+```{r}
+#produce graph1 fro, version 3 originalc
+
+h<-elements1[match(relations1$Source, elements1$ID), 3, drop=F]
+g<-elements1[match(relations1$Target, elements1$ID), 3, drop=F]
+
+j<-cbind(h,g)   #new dataframe
+
+#change column names
+colnames(j)[1] <- "new_source"
+colnames(j)[2] <- "new_target"
+
+#combine with the relation table
+dat<-cbind(relations1, j)
+
+
+dat$Source<- NULL
+dat$Target<- NULL
+
+library(igraph)
+col<-dat[, 5:6]
+eg1 <- graph_from_data_frame(col, directed = TRUE)
+plot(eg1)
+```
+
+#produce graph 2
+```{r}
+#produce graph2 from version 3 alterations model
+
+h<-elements2[match(relations2$Source, elements2$ID), 3, drop=F]
+g<-elements2[match(relations2$Target, elements2$ID), 3, drop=F]
+
+j<-cbind(h,g)   #new dataframe
+
+#change column names
+colnames(j)[1] <- "new_source"
+colnames(j)[2] <- "new_target"
+
+#combine with the relation table
+dat<-cbind(relations2, j)
+
+
+dat$Source<- NULL
+dat$Target<- NULL
+
+library(igraph)
+col<-dat[, 5:6]
+eg2<- graph_from_data_frame(col, directed = TRUE)
+plot(eg2)
+```
+
+```{r}
+#findinf similarity using jaccard index
+sim1<- similarity.jaccard(eg1, mode = "out")
+sim2<- similarity.jaccard(eg2, mode="out")
+
+#finding corellation between 2 similarity matrix
+assoc_sim<- cor.test(sim1, sim2)
+assoc_sim
+#or
+cor1<- diag(cor(sim1,sim2))
+```
+
+
+```{r}
+
+
+#findinf similarity using dice index
+sim1_d<- similarity.dice(eg1, mode = "out")
+sim2_d<- similarity.dice(eg2, mode="out")
+
+#finding corellation between 2 similarity matrix
+assoc_sim<- cor.test(sim1_d, sim2_d)
+assoc_sim
+#or
+cor2<-diag(cor(sim1_d,sim2_d))
+```
+
+##matrix equality
+#match the matrices
+matequal <- function(x, y)
+    is.matrix(x) && is.matrix(y) && dim(x) == dim(y) && all(x == y)
+matequal(sim1, sim2)
+
+
+##extra
+cor1<- as.matrix(cor1)
+cor2<- as.matrix(cor2)
+cor(cor1, cor2)
+
+d1<- sim2(sim1, sim2)
+d1_d<- sim2(sim1_d, sim2_d)
+cor.test(d1, d1_d)
+###it shows thar similarity found by 2 metrics results in almost equal result. so we decide to use jaccard over dice.
+##inverse log doesnot suits well for directed graph
+
+###plot is remaining
